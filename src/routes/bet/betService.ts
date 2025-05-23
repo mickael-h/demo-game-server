@@ -51,7 +51,7 @@ export class BetService {
     };
   }
 
-  public runThousandSpins(amount: number): {
+  public runThousandSpins(amount: number, options: { autowin?: boolean; autolose?: boolean } = {}): {
     totalSpins: number;
     totalWinAmount: number;
     totalBetAmount: number;
@@ -64,7 +64,7 @@ export class BetService {
     const totalSpins = 1000;
 
     for (let i = 0; i < totalSpins; i++) {
-      const result = this.placeBet({ amount });
+      const result = this.placeBet({ amount, ...options });
       totalWinAmount += result.winAmount;
       if (result.isWin) {
         totalWins++;

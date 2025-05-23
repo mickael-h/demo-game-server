@@ -21,15 +21,15 @@ router.post('/place', (req: Request<{}, {}, BetRequest>, res: Response) => {
   }
 });
 
-router.post('/thousand-spins', (req: Request<{}, {}, { amount: number }>, res: Response) => {
+router.post('/thousand-spins', (req: Request<{}, {}, BetRequest>, res: Response) => {
   try {
-    const { amount } = req.body;
+    const { amount, autowin, autolose } = req.body;
 
     if (![1, 5, 20].includes(amount)) {
       return res.status(400).json({ error: 'Invalid bet amount' });
     }
 
-    const results = betService.runThousandSpins(amount);
+    const results = betService.runThousandSpins(amount, { autowin, autolose });
     res.json(results);
   } catch (error) {
     console.error('Error running thousand spins:', error);

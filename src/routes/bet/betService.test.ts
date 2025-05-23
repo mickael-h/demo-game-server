@@ -100,5 +100,24 @@ describe('BetService', () => {
         expect(results.totalBetAmount).toBe(amount * 1000);
       }
     });
+
+    it('should force all wins when autowin is true', () => {
+      const amount = 5;
+      const results = betService.runThousandSpins(amount, { autowin: true });
+
+      expect(results.winRate).toBe(100);
+      expect(results.totalWinAmount).toBeGreaterThan(0);
+      expect(results.returnToPlayer).toBeGreaterThan(100);
+    });
+
+    it('should force all losses when autolose is true', () => {
+      const amount = 5;
+      const results = betService.runThousandSpins(amount, { autolose: true });
+
+      expect(results.winRate).toBe(0);
+      expect(results.totalWinAmount).toBe(0);
+      expect(results.returnToPlayer).toBe(0);
+      expect(results.expectation).toBe(-amount); // Expect to lose the bet amount each time
+    });
   });
 }); 

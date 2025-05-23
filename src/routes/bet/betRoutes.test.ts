@@ -115,9 +115,9 @@ describe('Bet Routes', () => {
         totalSpins: 1000,
         totalWinAmount: 5000,
         totalBetAmount: 5000,
-        averageWinAmount: 5,
+        expectation: 0,
         winRate: 10,
-        averageMultiplier: 1
+        returnToPlayer: 100
       };
 
       mockRunThousandSpins.mockReturnValue(mockResults);
@@ -128,7 +128,49 @@ describe('Bet Routes', () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockResults);
-      expect(mockRunThousandSpins).toHaveBeenCalledWith(5);
+      expect(mockRunThousandSpins).toHaveBeenCalledWith(5, {});
+    });
+
+    it('should handle autowin option', async () => {
+      const mockResults = {
+        totalSpins: 1000,
+        totalWinAmount: 10000,
+        totalBetAmount: 5000,
+        expectation: 5,
+        winRate: 100,
+        returnToPlayer: 200
+      };
+
+      mockRunThousandSpins.mockReturnValue(mockResults);
+
+      const response = await request(app)
+        .post('/api/bet/thousand-spins')
+        .send({ amount: 5, autowin: true });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(mockResults);
+      expect(mockRunThousandSpins).toHaveBeenCalledWith(5, { autowin: true });
+    });
+
+    it('should handle autolose option', async () => {
+      const mockResults = {
+        totalSpins: 1000,
+        totalWinAmount: 0,
+        totalBetAmount: 5000,
+        expectation: -5,
+        winRate: 0,
+        returnToPlayer: 0
+      };
+
+      mockRunThousandSpins.mockReturnValue(mockResults);
+
+      const response = await request(app)
+        .post('/api/bet/thousand-spins')
+        .send({ amount: 5, autolose: true });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(mockResults);
+      expect(mockRunThousandSpins).toHaveBeenCalledWith(5, { autolose: true });
     });
 
     it('should handle server errors gracefully', async () => {
@@ -142,7 +184,7 @@ describe('Bet Routes', () => {
 
       expect(response.status).toBe(500);
       expect(response.body).toHaveProperty('error', 'Internal server error');
-      expect(mockRunThousandSpins).toHaveBeenCalledWith(5);
+      expect(mockRunThousandSpins).toHaveBeenCalledWith(5, {});
     });
   });
 }); 
