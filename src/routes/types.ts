@@ -48,4 +48,5 @@ export interface SpinStats {
   expectation: number;
   winRate: number;
   returnToPlayer: number;
+  standardDeviation: number;
 }

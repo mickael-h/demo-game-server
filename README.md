@@ -5,6 +5,7 @@ A slot machine game server that provides betting functionality with configurable
 ## API Documentation
 
 ### Base URL
+
 ```
 http://localhost:3000/api
 ```
@@ -12,6 +13,7 @@ http://localhost:3000/api
 ### Endpoints
 
 #### Place a Bet
+
 ```http
 POST /bet/place
 ```
@@ -19,6 +21,7 @@ POST /bet/place
 Places a single bet and returns the result.
 
 **Request Body:**
+
 ```json
 {
   "amount": number,           // Required: Bet amount (must be one of: 1, 5, 10, 25, 50, 100)
@@ -41,6 +44,7 @@ Places a single bet and returns the result.
 ```
 
 **Response:**
+
 ```json
 {
   "symbols": number[],      // Array of 3 symbol indices
@@ -52,10 +56,12 @@ Places a single bet and returns the result.
 ```
 
 **Error Responses:**
+
 - `400 Bad Request`: Invalid bet amount or weights
 - `500 Internal Server Error`: Server error
 
 #### Run Many Spins
+
 ```http
 POST /bet/many-spins
 ```
@@ -63,6 +69,7 @@ POST /bet/many-spins
 Runs multiple spins and returns statistics.
 
 **Request Body:**
+
 ```json
 {
   "amount": number,           // Required: Bet amount (must be one of: 1, 5, 10, 25, 50, 100)
@@ -86,6 +93,7 @@ Runs multiple spins and returns statistics.
 ```
 
 **Response:**
+
 ```json
 {
   "totalSpins": number,     // Total number of spins
@@ -93,16 +101,20 @@ Runs multiple spins and returns statistics.
   "totalBetAmount": number, // Total amount bet
   "expectation": number,    // Expected value per spin
   "winRate": number,        // Win rate as a percentage
-  "returnToPlayer": number  // Return to player as a percentage
+  "returnToPlayer": number, // Return to player as a percentage
+  "standardDeviation": number // Standard deviation of win amounts
 }
 ```
 
 **Error Responses:**
+
 - `400 Bad Request`: Invalid bet amount, number of spins, or weights
 - `500 Internal Server Error`: Server error
 
 ### Symbol Values
+
 The slot machine uses the following symbols with their respective values:
+
 - 🍒 (Cherry): 2x
 - 🍊 (Orange): 3x
 - 🍋 (Lemon): 4x
@@ -111,6 +123,7 @@ The slot machine uses the following symbols with their respective values:
 - 💎 (Diamond): 20x
 
 ### Win Types and Payouts
+
 - **Three of a Kind**: All three symbols match
   - Payout: bet amount × symbol value
 - **Two of a Kind**: Two symbols match
@@ -119,9 +132,11 @@ The slot machine uses the following symbols with their respective values:
   - Payout: 0
 
 ### Weight System
+
 The game uses a weight system to control probabilities:
 
 1. **Outcome Weights**: Control the probability of different win types
+
    - Each weight must be a positive number
    - Weights are typically kept between 0 and 1
    - Higher weights increase the probability of that outcome
@@ -136,6 +151,7 @@ The game uses a weight system to control probabilities:
 ### Example Requests
 
 #### Place a Bet with Custom Weights
+
 ```json
 {
   "amount": 10,
@@ -145,17 +161,18 @@ The game uses a weight system to control probabilities:
     "noWin": 0.6
   },
   "symbolWeights": {
-    "0": 0.2,  // 🍒
-    "1": 0.2,  // 🍊
-    "2": 0.2,  // 🍋
-    "3": 0.2,  // 🍇
-    "4": 0.1,  // 7️⃣
-    "5": 0.1   // 💎
+    "0": 0.2, // 🍒
+    "1": 0.2, // 🍊
+    "2": 0.2, // 🍋
+    "3": 0.2, // 🍇
+    "4": 0.1, // 7️⃣
+    "5": 0.1 // 💎
   }
 }
 ```
 
 #### Run Many Spins with Default Settings
+
 ```json
 {
   "amount": 5,
@@ -166,30 +183,36 @@ The game uses a weight system to control probabilities:
 ## Development
 
 ### Prerequisites
+
 - Node.js 18.x
 - npm
 
 ### Installation
+
 ```bash
 npm install
 ```
 
 ### Running Tests
+
 ```bash
 npm test
 ```
 
 ### Development Mode
+
 ```bash
 npm run dev
 ```
 
 ### Building
+
 ```bash
 npm run build
 ```
 
 ### Production
+
 ```bash
 npm start
-``` 
+```

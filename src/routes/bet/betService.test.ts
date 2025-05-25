@@ -227,12 +227,14 @@ describe("BetService", () => {
       expect(results).toHaveProperty("expectation");
       expect(results).toHaveProperty("winRate");
       expect(results).toHaveProperty("returnToPlayer");
+      expect(results).toHaveProperty("standardDeviation");
 
       // Verify calculations
       expect(results.expectation).toBe((results.totalWinAmount - results.totalBetAmount) / 1000);
       expect(results.winRate).toBeGreaterThanOrEqual(0);
       expect(results.winRate).toBeLessThanOrEqual(100);
       expect(results.returnToPlayer).toBe((results.totalWinAmount / results.totalBetAmount) * 100);
+      expect(results.standardDeviation).toBeGreaterThanOrEqual(0);
     });
 
     it("should handle custom number of spins", () => {
@@ -263,6 +265,8 @@ describe("BetService", () => {
       expect(results.totalWinAmount).toBeGreaterThan(0);
       expect(results.returnToPlayer).toBeGreaterThan(100);
       expect(results.totalSpins).toBe(spins);
+      // Standard deviation should be greater than 0 because different symbols have different multipliers
+      expect(results.standardDeviation).toBeGreaterThan(0);
     });
 
     it("should force all losses when autolose is true", () => {
@@ -275,6 +279,7 @@ describe("BetService", () => {
       expect(results.returnToPlayer).toBe(0);
       expect(results.expectation).toBe(-amount); // Expect to lose the bet amount each time
       expect(results.totalSpins).toBe(spins);
+      expect(results.standardDeviation).toBe(0); // All losses are identical
     });
 
     it("should respect symbol weights in many spins", () => {

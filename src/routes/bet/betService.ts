@@ -228,10 +228,12 @@ export class BetService {
     let totalWinAmount = 0;
     let totalWins = 0;
     const totalSpins = spins;
+    const winAmounts: number[] = [];
 
     for (let i = 0; i < totalSpins; i++) {
       const result = this.placeBet({ amount, ...options });
       totalWinAmount += result.winAmount;
+      winAmounts.push(result.winAmount);
       if (result.isWin) {
         totalWins++;
       }
@@ -242,6 +244,12 @@ export class BetService {
     const winRate = (totalWins / totalSpins) * 100;
     const returnToPlayer = (totalWinAmount / totalBetAmount) * 100;
 
+    // Calculate standard deviation
+    const mean = totalWinAmount / totalSpins;
+    const squaredDifferences = winAmounts.map((win) => (win - mean) * (win - mean));
+    const variance = squaredDifferences.reduce((sum, diff) => sum + diff, 0) / totalSpins;
+    const standardDeviation = Math.sqrt(variance);
+
     return {
       totalSpins,
       totalWinAmount,
@@ -249,6 +257,7 @@ export class BetService {
       expectation,
       winRate,
       returnToPlayer,
+      standardDeviation,
     };
   }
 }
