@@ -18,6 +18,11 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
+// Redirect root to /api
+app.get("/", (_req: Request, res: Response) => {
+  res.redirect("/api");
+});
+
 // API routes
 app.use("/api", indexRouter);
 
