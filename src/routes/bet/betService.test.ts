@@ -154,7 +154,7 @@ describe('BetService', () => {
 
       // Set weight of first symbol (🍒) to 10 and others to 1, using indexes
       const symbolWeights = {
-        0: 10, // 🍒
+        0: 0.7, // 🍒
         1: 1,  // 🍊
         2: 1,  // 🍋
         3: 1,  // 🍇
