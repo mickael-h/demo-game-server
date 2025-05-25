@@ -174,41 +174,14 @@ describe('BetService', () => {
     });
 
     it('should handle missing symbol weights gracefully', () => {
-      // Override Math.random to always select the first symbol
-      let call = 0;
-      Math.random = () => {
-        call++;
-        if (call === 1) return 0.2; // select TWO_OF_A_KIND
-        if (call === 2) return 0.0; // select first symbol
-        if (call === 3) return 1.0; // select different symbol
-        if (call === 4) return 0.0; // differentPosition = 0
-        return 0.0;
-      };
-
       // Only specify weight for one symbol (index 0)
       const symbolWeights = {
         0: 10
       };
-
-      const result = betService.placeBet({ amount: 10, symbolWeights });
-      
-      expect(result.isWin).toBe(true);
-      expect(result.winType).toBe(WinType.TWO_OF_A_KIND);
-      // Should still work, with unspecified symbols defaulting to weight 1
+      expect(() => betService.placeBet({ amount: 10, symbolWeights })).toThrow();
     });
 
     it('should handle zero weights correctly', () => {
-      // Override Math.random to always select the second symbol
-      let call = 0;
-      Math.random = () => {
-        call++;
-        if (call === 1) return 0.2; // select TWO_OF_A_KIND
-        if (call === 2) return 0.5; // select second symbol (due to weights)
-        if (call === 3) return 1.0; // select different symbol
-        if (call === 4) return 0.0; // differentPosition = 0
-        return 0.0;
-      };
-
       // Set weight of first symbol to 0 and others to 1, using indexes
       const symbolWeights = {
         0: 0, // 🍒
@@ -218,12 +191,29 @@ describe('BetService', () => {
         4: 1, // 7️⃣
         5: 1  // 💎
       };
+      expect(() => betService.placeBet({ amount: 10, symbolWeights })).toThrow();
+    });
 
-      const result = betService.placeBet({ amount: 10, symbolWeights });
-      
-      expect(result.isWin).toBe(true);
-      expect(result.winType).toBe(WinType.TWO_OF_A_KIND);
-      expect(result.symbols[0]).not.toBe(0); // First symbol (🍒) should never be selected
+    it('should handle invalid symbol weights gracefully', () => {
+      // Invalid symbol weights: negative and non-numeric
+      const symbolWeights = {
+        0: -1,  // Negative weight
+        1: 'invalid' as any,  // Non-numeric weight
+        2: 1,
+        3: 1,
+        4: 1,
+        5: 1
+      };
+      expect(() => betService.placeBet({ amount: 10, symbolWeights })).toThrow();
+    });
+
+    it('should handle invalid outcome weights gracefully', () => {
+      const outcomeWeights = {
+        threeOfAKind: -1,
+        twoOfAKind: 0,
+        noWin: 'invalid' as any
+      };
+      expect(() => betService.placeBet({ amount: 10, outcomeWeights })).toThrow();
     });
   });
 
@@ -301,7 +291,7 @@ describe('BetService', () => {
       };
 
       const symbolWeights = {
-        0: 10, // 🍒
+        0: 0.7, // 🍒
         1: 1,  // 🍊
         2: 1,  // 🍋
         3: 1,  // 🍇

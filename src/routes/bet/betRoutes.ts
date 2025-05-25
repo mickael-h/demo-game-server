@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { BetService } from './betService';
 import { BetRequest } from '../types';
+import { InvalidWeightsError } from './betService';
 
 const ALLOWED_BETS = [1, 5, 10, 25, 50, 100];
 
@@ -18,6 +19,9 @@ router.post('/place', (req: Request<{}, {}, BetRequest>, res: Response) => {
     const result = betService.placeBet({ amount, autowin, autolose, outcomeWeights, symbolWeights });
     res.json(result);
   } catch (error) {
+    if ((error as any) instanceof InvalidWeightsError) {
+      return res.status(400).json({ error: (error as any).message });
+    }
     console.error('Error placing bet:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -38,6 +42,9 @@ router.post('/many-spins', (req: Request<{}, {}, BetRequest & { spins?: number }
     const results = betService.runManySpins(amount, { autowin, autolose, outcomeWeights, symbolWeights }, spins);
     res.json(results);
   } catch (error) {
+    if ((error as any) instanceof InvalidWeightsError) {
+      return res.status(400).json({ error: (error as any).message });
+    }
     console.error('Error running many spins:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

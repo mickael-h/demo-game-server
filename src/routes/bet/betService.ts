@@ -9,6 +9,41 @@ import {
   SymbolWeights
 } from '../types';
 
+export class InvalidWeightsError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidWeightsError';
+  }
+}
+
+function validateOutcomeWeights(weights: OutcomeWeights): void {
+  const requiredKeys = ['threeOfAKind', 'twoOfAKind', 'noWin'];
+  const keys = Object.keys(weights ?? {});
+  if (keys.length !== 3 || !requiredKeys.every(k => keys.includes(k))) {
+    throw new InvalidWeightsError('All outcomeWeights keys (threeOfAKind, twoOfAKind, noWin) must be present.');
+  }
+  for (const key of requiredKeys) {
+    const value = (weights as any)[key];
+    if (typeof value !== 'number' || value <= 0 || !isFinite(value)) {
+      throw new InvalidWeightsError(`outcomeWeights.${key} must be a positive number.`);
+    }
+  }
+}
+
+function validateSymbolWeights(weights: SymbolWeights): void {
+  const requiredIndexes = Array.from({ length: SLOT_SYMBOLS.length }, (_, i) => i);
+  const keys = Object.keys(weights ?? {}).map(Number);
+  if (keys.length !== requiredIndexes.length || !requiredIndexes.every(idx => keys.includes(idx))) {
+    throw new InvalidWeightsError(`symbolWeights must have all indexes from 0 to ${SLOT_SYMBOLS.length - 1}.`);
+  }
+  for (const idx of requiredIndexes) {
+    const value = (weights as any)[idx];
+    if (typeof value !== 'number' || value <= 0 || !isFinite(value)) {
+      throw new InvalidWeightsError(`symbolWeights[${idx}] must be a positive number.`);
+    }
+  }
+}
+
 export class BetService {
   private static instance: BetService;
   private readonly symbols: string[];
@@ -113,6 +148,9 @@ export class BetService {
 
   public placeBet(request: BetRequest): BetResponse {
     const { amount: betAmount, autowin, autolose, outcomeWeights, symbolWeights } = request;
+    // Strict validation
+    if (outcomeWeights) validateOutcomeWeights(outcomeWeights);
+    if (symbolWeights) validateSymbolWeights(symbolWeights);
     let resultSymbols: number[];
     let winType: WinType;
     let winSymbol: number = 0;
@@ -156,6 +194,9 @@ export class BetService {
     options: Omit<BetRequest, 'amount'> = {}, 
     spins: number = 1000
   ): SpinStats {
+    // Strict validation
+    if (options.outcomeWeights) validateOutcomeWeights(options.outcomeWeights);
+    if (options.symbolWeights) validateSymbolWeights(options.symbolWeights);
     let totalWinAmount = 0;
     let totalWins = 0;
     const totalSpins = spins;

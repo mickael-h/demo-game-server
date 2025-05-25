@@ -1,7 +1,7 @@
 import request from 'supertest';
 import express from 'express';
 import betRoutes from './betRoutes';
-import { BetService } from './betService';
+import { BetService, InvalidWeightsError } from './betService';
 import { WinType } from '../types';
 
 // Mock the BetService
@@ -14,6 +14,12 @@ jest.mock('./betService', () => {
         placeBet: mockPlaceBet,
         runManySpins: mockRunManySpins
       })
+    },
+    InvalidWeightsError: class InvalidWeightsError extends Error {
+      constructor(message: string) {
+        super(message);
+        this.name = 'InvalidWeightsError';
+      }
     }
   };
 });
@@ -64,6 +70,32 @@ describe('Bet Routes', () => {
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('error', 'Invalid bet amount');
       expect(mockPlaceBet).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 for invalid outcomeWeights', async () => {
+      mockPlaceBet.mockImplementation(() => {
+        throw new InvalidWeightsError('Invalid outcome weights');
+      });
+
+      const response = await request(app)
+        .post('/api/bet/place')
+        .send({ amount: 5, outcomeWeights: { threeOfAKind: -1, twoOfAKind: 0, noWin: 'bad' } });
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('error', 'Invalid outcome weights');
+      expect(mockPlaceBet).toHaveBeenCalled();
+    });
+
+    it('should return 400 for invalid symbolWeights', async () => {
+      mockPlaceBet.mockImplementation(() => {
+        throw new InvalidWeightsError('Invalid symbol weights');
+      });
+
+      const response = await request(app)
+        .post('/api/bet/place')
+        .send({ amount: 5, symbolWeights: { 0: -1, 1: 'bad', 2: 1, 3: 1, 4: 1, 5: 1 } });
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('error', 'Invalid symbol weights');
+      expect(mockPlaceBet).toHaveBeenCalled();
     });
 
     it('should successfully place a bet', async () => {
@@ -150,6 +182,32 @@ describe('Bet Routes', () => {
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('error', 'Invalid number of spins. Must be between 1 and 10000000');
       expect(mockRunManySpins).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 for invalid outcomeWeights in many-spins', async () => {
+      mockRunManySpins.mockImplementation(() => {
+        throw new InvalidWeightsError('Invalid outcome weights');
+      });
+
+      const response = await request(app)
+        .post('/api/bet/many-spins')
+        .send({ amount: 5, outcomeWeights: { threeOfAKind: -1, twoOfAKind: 0, noWin: 'bad' } });
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('error', 'Invalid outcome weights');
+      expect(mockRunManySpins).toHaveBeenCalled();
+    });
+
+    it('should return 400 for invalid symbolWeights in many-spins', async () => {
+      mockRunManySpins.mockImplementation(() => {
+        throw new InvalidWeightsError('Invalid symbol weights');
+      });
+
+      const response = await request(app)
+        .post('/api/bet/many-spins')
+        .send({ amount: 5, symbolWeights: { 0: -1, 1: 'bad', 2: 1, 3: 1, 4: 1, 5: 1 } });
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('error', 'Invalid symbol weights');
+      expect(mockRunManySpins).toHaveBeenCalled();
     });
 
     it('should accept maximum allowed spins', async () => {
