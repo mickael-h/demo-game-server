@@ -22,15 +22,15 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/api", indexRouter);
 
 // catch 404 and forward to error handler
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use((_req: Request, _res: Response, next: NextFunction) => {
   next(createError(404));
 });
 
 // error handler
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   // set locals, only providing error in development
   res.locals.message = err.message;
-  res.locals.error = req.app.get("env") === "development" ? err : {};
+  res.locals.error = _req.app.get("env") === "development" ? err : {};
 
   // send error response
   res.status(err.status || 500);
