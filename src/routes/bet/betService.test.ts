@@ -1,7 +1,7 @@
-import { BetService } from './betService';
-import { SLOT_SYMBOLS, SYMBOL_VALUES, WinType } from '../types';
+import { BetService } from "./betService";
+import { SLOT_SYMBOLS, SYMBOL_VALUES, WinType } from "../types";
 
-describe('BetService', () => {
+describe("BetService", () => {
   let betService: BetService;
   let originalRandom: () => number;
 
@@ -18,26 +18,26 @@ describe('BetService', () => {
     Math.random = originalRandom;
   });
 
-  describe('placeBet', () => {
-    it('should return a valid bet response with random symbols', () => {
+  describe("placeBet", () => {
+    it("should return a valid bet response with random symbols", () => {
       const result = betService.placeBet({ amount: 10 });
-      
-      expect(result).toHaveProperty('symbols');
-      expect(result).toHaveProperty('betAmount', 10);
-      expect(result).toHaveProperty('winAmount');
-      expect(result).toHaveProperty('isWin');
-      expect(result).toHaveProperty('winType');
-      
+
+      expect(result).toHaveProperty("symbols");
+      expect(result).toHaveProperty("betAmount", 10);
+      expect(result).toHaveProperty("winAmount");
+      expect(result).toHaveProperty("isWin");
+      expect(result).toHaveProperty("winType");
+
       expect(result.symbols).toHaveLength(3);
-      result.symbols.forEach(symbol => {
+      result.symbols.forEach((symbol) => {
         expect(symbol).toBeGreaterThanOrEqual(0);
         expect(symbol).toBeLessThan(SLOT_SYMBOLS.length);
       });
     });
 
-    it('should force a win when autowin is true', () => {
+    it("should force a win when autowin is true", () => {
       const result = betService.placeBet({ amount: 10, autowin: true });
-      
+
       expect(result.isWin).toBe(true);
       expect(result.winType).toBe(WinType.THREE_OF_A_KIND);
       expect(result.symbols[0]).toBe(result.symbols[1]);
@@ -49,9 +49,9 @@ describe('BetService', () => {
       expect(SYMBOL_VALUES[symbol]).toBeDefined();
     });
 
-    it('should force a loss when autolose is true', () => {
+    it("should force a loss when autolose is true", () => {
       const result = betService.placeBet({ amount: 10, autolose: true });
-      
+
       expect(result.isWin).toBe(false);
       expect(result.winType).toBe(WinType.NO_WIN);
       expect(result.symbols[0]).not.toBe(result.symbols[1]);
@@ -60,27 +60,27 @@ describe('BetService', () => {
       expect(result.winAmount).toBe(0);
 
       // Verify all symbols are valid
-      result.symbols.forEach(symbol => {
+      result.symbols.forEach((symbol) => {
         expect(SLOT_SYMBOLS[symbol]).toBeDefined();
       });
     });
 
-    it('should calculate correct win amount based on symbol values', () => {
+    it("should calculate correct win amount based on symbol values", () => {
       // Override Math.random to get a specific symbol
       Math.random = () => 0.1; // This will give us the first symbol (🍒)
 
       const result = betService.placeBet({ amount: 10, autowin: true });
-      
+
       expect(result.isWin).toBe(true);
       expect(result.winType).toBe(WinType.THREE_OF_A_KIND);
       const symbol = SLOT_SYMBOLS[result.symbols[0]];
       const expectedMultiplier = SYMBOL_VALUES[symbol];
       const expectedWinAmount = Math.floor(10 * expectedMultiplier);
-      
+
       expect(result.winAmount).toBe(expectedWinAmount);
     });
 
-    it('should handle two of a kind wins', () => {
+    it("should handle two of a kind wins", () => {
       // Override Math.random to control the two of a kind outcome deterministically
       let call = 0;
       Math.random = () => {
@@ -99,18 +99,17 @@ describe('BetService', () => {
 
       // Find which symbol is the odd one out
       const [a, b, c] = result.symbols;
-      expect(
-        (a === b && a !== c) ||
-        (a === c && a !== b) ||
-        (b === c && b !== a)
-      ).toBe(true);
+      expect((a === b && a !== c) || (a === c && a !== b) || (b === c && b !== a)).toBe(true);
 
       // The winning symbol is the one that appears twice
-      const counts = [a, b, c].reduce((acc, val) => {
-        acc[val] = (acc[val] || 0) + 1;
-        return acc;
-      }, {} as Record<number, number>);
-      const winningSymbol = Number(Object.keys(counts).find(k => counts[Number(k)] === 2));
+      const counts = [a, b, c].reduce(
+        (acc, val) => {
+          acc[val] = (acc[val] || 0) + 1;
+          return acc;
+        },
+        {} as Record<number, number>
+      );
+      const winningSymbol = Number(Object.keys(counts).find((k) => counts[Number(k)] === 2));
 
       const symbol = SLOT_SYMBOLS[winningSymbol];
       const expectedMultiplier = SYMBOL_VALUES[symbol] * 0.2;
@@ -119,13 +118,13 @@ describe('BetService', () => {
       expect(result.winAmount).toBe(expectedWinAmount);
     });
 
-    it('should verify win type is always present in response', () => {
+    it("should verify win type is always present in response", () => {
       const result = betService.placeBet({ amount: 10 });
-      expect(result).toHaveProperty('winType');
+      expect(result).toHaveProperty("winType");
       expect(Object.values(WinType)).toContain(result.winType);
     });
 
-    it('should verify win type matches isWin property', () => {
+    it("should verify win type matches isWin property", () => {
       const result = betService.placeBet({ amount: 10 });
       if (result.isWin) {
         expect([WinType.THREE_OF_A_KIND, WinType.TWO_OF_A_KIND]).toContain(result.winType);
@@ -134,13 +133,13 @@ describe('BetService', () => {
       }
     });
 
-    it('should verify win amount is zero for no win', () => {
+    it("should verify win amount is zero for no win", () => {
       const result = betService.placeBet({ amount: 10, autolose: true });
       expect(result.winType).toBe(WinType.NO_WIN);
       expect(result.winAmount).toBe(0);
     });
 
-    it('should respect custom symbol weights', () => {
+    it("should respect custom symbol weights", () => {
       // Override Math.random to control both win type and symbol selection
       let call = 0;
       Math.random = () => {
@@ -155,33 +154,33 @@ describe('BetService', () => {
       // Set weight of first symbol (🍒) to 10 and others to 1, using indexes
       const symbolWeights = {
         0: 0.7, // 🍒
-        1: 1,  // 🍊
-        2: 1,  // 🍋
-        3: 1,  // 🍇
-        4: 1,  // 7️⃣
-        5: 1   // 💎
+        1: 1, // 🍊
+        2: 1, // 🍋
+        3: 1, // 🍇
+        4: 1, // 7️⃣
+        5: 1, // 💎
       };
 
       const result = betService.placeBet({ amount: 10, symbolWeights });
-      
+
       expect(result.isWin).toBe(true);
       expect(result.winType).toBe(WinType.TWO_OF_A_KIND);
-      
+
       // Find which symbol appears twice
       const [a, b, c] = result.symbols;
       const winningSymbol = a === b ? a : b === c ? b : a;
       expect(winningSymbol).toBe(0); // First symbol (🍒) should be selected
     });
 
-    it('should handle missing symbol weights gracefully', () => {
+    it("should handle missing symbol weights gracefully", () => {
       // Only specify weight for one symbol (index 0)
       const symbolWeights = {
-        0: 10
+        0: 10,
       };
       expect(() => betService.placeBet({ amount: 10, symbolWeights })).toThrow();
     });
 
-    it('should handle zero weights correctly', () => {
+    it("should handle zero weights correctly", () => {
       // Set weight of first symbol to 0 and others to 1, using indexes
       const symbolWeights = {
         0: 0, // 🍒
@@ -189,54 +188,54 @@ describe('BetService', () => {
         2: 1, // 🍋
         3: 1, // 🍇
         4: 1, // 7️⃣
-        5: 1  // 💎
+        5: 1, // 💎
       };
       expect(() => betService.placeBet({ amount: 10, symbolWeights })).toThrow();
     });
 
-    it('should handle invalid symbol weights gracefully', () => {
+    it("should handle invalid symbol weights gracefully", () => {
       // Invalid symbol weights: negative and non-numeric
       const symbolWeights = {
-        0: -1,  // Negative weight
-        1: 'invalid' as any,  // Non-numeric weight
+        0: -1, // Negative weight
+        1: "invalid" as any, // Non-numeric weight
         2: 1,
         3: 1,
         4: 1,
-        5: 1
+        5: 1,
       };
       expect(() => betService.placeBet({ amount: 10, symbolWeights })).toThrow();
     });
 
-    it('should handle invalid outcome weights gracefully', () => {
+    it("should handle invalid outcome weights gracefully", () => {
       const outcomeWeights = {
         threeOfAKind: -1,
         twoOfAKind: 0,
-        noWin: 'invalid' as any
+        noWin: "invalid" as any,
       };
       expect(() => betService.placeBet({ amount: 10, outcomeWeights })).toThrow();
     });
   });
 
-  describe('runManySpins', () => {
-    it('should return correct statistics for default 1000 spins', () => {
+  describe("runManySpins", () => {
+    it("should return correct statistics for default 1000 spins", () => {
       const amount = 5;
       const results = betService.runManySpins(amount);
 
-      expect(results).toHaveProperty('totalSpins', 1000);
-      expect(results).toHaveProperty('totalBetAmount', amount * 1000);
-      expect(results).toHaveProperty('totalWinAmount');
-      expect(results).toHaveProperty('expectation');
-      expect(results).toHaveProperty('winRate');
-      expect(results).toHaveProperty('returnToPlayer');
+      expect(results).toHaveProperty("totalSpins", 1000);
+      expect(results).toHaveProperty("totalBetAmount", amount * 1000);
+      expect(results).toHaveProperty("totalWinAmount");
+      expect(results).toHaveProperty("expectation");
+      expect(results).toHaveProperty("winRate");
+      expect(results).toHaveProperty("returnToPlayer");
 
       // Verify calculations
       expect(results.expectation).toBe((results.totalWinAmount - results.totalBetAmount) / 1000);
       expect(results.winRate).toBeGreaterThanOrEqual(0);
       expect(results.winRate).toBeLessThanOrEqual(100);
-      expect(results.returnToPlayer).toBe(results.totalWinAmount / results.totalBetAmount * 100);
+      expect(results.returnToPlayer).toBe((results.totalWinAmount / results.totalBetAmount) * 100);
     });
 
-    it('should handle custom number of spins', () => {
+    it("should handle custom number of spins", () => {
       const amount = 5;
       const spins = 500;
       const results = betService.runManySpins(amount, {}, spins);
@@ -245,17 +244,17 @@ describe('BetService', () => {
       expect(results.totalBetAmount).toBe(amount * spins);
     });
 
-    it('should handle different bet amounts correctly', () => {
+    it("should handle different bet amounts correctly", () => {
       const amounts = [1, 5, 20];
       const spins = 100;
-      
+
       for (const amount of amounts) {
         const results = betService.runManySpins(amount, {}, spins);
         expect(results.totalBetAmount).toBe(amount * spins);
       }
     });
 
-    it('should force all wins when autowin is true', () => {
+    it("should force all wins when autowin is true", () => {
       const amount = 5;
       const spins = 100;
       const results = betService.runManySpins(amount, { autowin: true }, spins);
@@ -266,7 +265,7 @@ describe('BetService', () => {
       expect(results.totalSpins).toBe(spins);
     });
 
-    it('should force all losses when autolose is true', () => {
+    it("should force all losses when autolose is true", () => {
       const amount = 5;
       const spins = 100;
       const results = betService.runManySpins(amount, { autolose: true }, spins);
@@ -278,7 +277,7 @@ describe('BetService', () => {
       expect(results.totalSpins).toBe(spins);
     });
 
-    it('should respect symbol weights in many spins', () => {
+    it("should respect symbol weights in many spins", () => {
       // Override Math.random to always select the first symbol
       let call = 0;
       Math.random = () => {
@@ -292,18 +291,18 @@ describe('BetService', () => {
 
       const symbolWeights = {
         0: 0.7, // 🍒
-        1: 1,  // 🍊
-        2: 1,  // 🍋
-        3: 1,  // 🍇
-        4: 1,  // 7️⃣
-        5: 1   // 💎
+        1: 1, // 🍊
+        2: 1, // 🍋
+        3: 1, // 🍇
+        4: 1, // 7️⃣
+        5: 1, // 💎
       };
 
       const results = betService.runManySpins(10, { symbolWeights }, 100);
-      
+
       expect(results.totalSpins).toBe(100);
       expect(results.winRate).toBeGreaterThan(0);
       expect(results.returnToPlayer).toBeGreaterThan(0);
     });
   });
-}); 
+});
