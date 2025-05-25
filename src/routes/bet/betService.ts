@@ -102,7 +102,7 @@ export class BetService {
     return 0;
   }
 
-  private generateNoWinSymbols(symbolWeights?: SymbolWeights): { symbols: number[], winningSymbol: number } {
+  private generateNoWinSymbols(): { symbols: number[], winningSymbol: number } {
     const availableIndices = [...Array(this.symbols.length).keys()];
     const resultSymbols: number[] = [];
     for (let i = 0; i < 3; i++) {
@@ -113,7 +113,7 @@ export class BetService {
     return { symbols: resultSymbols, winningSymbol: 0 };
   }
 
-  private generateTwoOfAKindSymbols(winningSymbol: number, symbolWeights?: SymbolWeights): { symbols: number[], winningSymbol: number } {
+  private generateTwoOfAKindSymbols(winningSymbol: number): { symbols: number[], winningSymbol: number } {
     const availableIndices = [...Array(this.symbols.length).keys()].filter(i => i !== winningSymbol);
     const randomIndex = Math.floor(Math.random() * availableIndices.length);
     const differentSymbol = availableIndices[randomIndex];
@@ -133,7 +133,7 @@ export class BetService {
 
   private generateSymbols(winType: WinType, symbolWeights?: SymbolWeights): { symbols: number[], winningSymbol: number } {
     if (winType === WinType.NO_WIN) {
-      return this.generateNoWinSymbols(symbolWeights);
+      return this.generateNoWinSymbols();
     }
 
     const winningSymbol = this.selectWinningSymbol(symbolWeights);
@@ -143,14 +143,18 @@ export class BetService {
     }
 
     // TWO_OF_A_KIND case
-    return this.generateTwoOfAKindSymbols(winningSymbol, symbolWeights);
+    return this.generateTwoOfAKindSymbols(winningSymbol);
   }
 
   public placeBet(request: BetRequest): BetResponse {
     const { amount: betAmount, autowin, autolose, outcomeWeights, symbolWeights } = request;
     // Strict validation
-    if (outcomeWeights) validateOutcomeWeights(outcomeWeights);
-    if (symbolWeights) validateSymbolWeights(symbolWeights);
+    if (outcomeWeights) {
+      validateOutcomeWeights(outcomeWeights);
+    }
+    if (symbolWeights) {
+      validateSymbolWeights(symbolWeights);
+    }
     let resultSymbols: number[];
     let winType: WinType;
     let winSymbol: number = 0;
