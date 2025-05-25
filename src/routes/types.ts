@@ -9,10 +9,23 @@ export const SYMBOL_VALUES: Record<string, number> = {
   "💎": 20,   // Diamond - highest value
 };
 
+export enum WinType {
+  NO_WIN = 'NO_WIN',
+  TWO_OF_A_KIND = 'TWO_OF_A_KIND',
+  THREE_OF_A_KIND = 'THREE_OF_A_KIND'
+}
+
+export interface OutcomeWeights {
+  threeOfAKind?: number;
+  twoOfAKind?: number;
+  noWin?: number;
+}
+
 export interface BetRequest {
   amount: number;
   autowin?: boolean;
   autolose?: boolean;
+  outcomeWeights?: OutcomeWeights;
 }
 
 export interface BetResponse {
@@ -20,4 +33,14 @@ export interface BetResponse {
   betAmount: number;
   winAmount: number;
   isWin: boolean;
+  winType: WinType;
+}
+
+export interface SpinStats {
+  totalSpins: number;
+  totalWinAmount: number;
+  totalBetAmount: number;
+  expectation: number;
+  winRate: number;
+  returnToPlayer: number;
 } 

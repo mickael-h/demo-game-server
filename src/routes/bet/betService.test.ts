@@ -1,5 +1,5 @@
 import { BetService } from './betService';
-import { SLOT_SYMBOLS, SYMBOL_VALUES } from '../types';
+import { SLOT_SYMBOLS, SYMBOL_VALUES, WinType } from '../types';
 
 describe('BetService', () => {
   let betService: BetService;
@@ -18,6 +18,7 @@ describe('BetService', () => {
       expect(result).toHaveProperty('betAmount', 10);
       expect(result).toHaveProperty('winAmount');
       expect(result).toHaveProperty('isWin');
+      expect(result).toHaveProperty('winType');
       
       expect(result.symbols).toHaveLength(3);
       result.symbols.forEach(symbol => {
@@ -30,6 +31,7 @@ describe('BetService', () => {
       const result = betService.placeBet({ amount: 10, autowin: true });
       
       expect(result.isWin).toBe(true);
+      expect(result.winType).toBe(WinType.THREE_OF_A_KIND);
       expect(result.symbols[0]).toBe(result.symbols[1]);
       expect(result.symbols[1]).toBe(result.symbols[2]);
       expect(result.winAmount).toBeGreaterThan(0);
@@ -43,6 +45,7 @@ describe('BetService', () => {
       const result = betService.placeBet({ amount: 10, autolose: true });
       
       expect(result.isWin).toBe(false);
+      expect(result.winType).toBe(WinType.NO_WIN);
       expect(result.symbols[0]).not.toBe(result.symbols[1]);
       expect(result.symbols[1]).not.toBe(result.symbols[2]);
       expect(result.symbols[0]).not.toBe(result.symbols[2]);
@@ -55,28 +58,75 @@ describe('BetService', () => {
     });
 
     it('should calculate correct win amount based on symbol values', () => {
+      // Mock Math.random to get a specific symbol
+      const originalRandom = Math.random;
+      Math.random = jest.fn().mockReturnValue(0.1); // This will give us the first symbol (🍒)
+
       const result = betService.placeBet({ amount: 10, autowin: true });
       
       expect(result.isWin).toBe(true);
+      expect(result.winType).toBe(WinType.THREE_OF_A_KIND);
       const symbol = SLOT_SYMBOLS[result.symbols[0]];
       const expectedMultiplier = SYMBOL_VALUES[symbol];
       const expectedWinAmount = Math.floor(10 * expectedMultiplier);
       
       expect(result.winAmount).toBe(expectedWinAmount);
+
+      // Restore original Math.random
+      Math.random = originalRandom;
     });
 
-    it('should return zero win amount for losing combinations', () => {
-      const result = betService.placeBet({ amount: 10, autolose: true });
+    it('should handle two of a kind wins', () => {
+      // Mock the random number generation to get two of a kind
+      const originalRandom = Math.random;
+      Math.random = jest.fn()
+        .mockReturnValueOnce(0.1) // First symbol
+        .mockReturnValueOnce(0.1) // Second symbol (same as first)
+        .mockReturnValueOnce(0.5); // Third symbol (different)
+
+      const result = betService.placeBet({ amount: 10 });
       
-      expect(result.isWin).toBe(false);
+      expect(result.isWin).toBe(true);
+      expect(result.winType).toBe(WinType.TWO_OF_A_KIND);
+      expect(result.symbols[0]).toBe(result.symbols[1]);
+      expect(result.symbols[0]).not.toBe(result.symbols[2]);
+      
+      const symbol = SLOT_SYMBOLS[result.symbols[0]];
+      const expectedMultiplier = SYMBOL_VALUES[symbol] * 0.2; // Two of a kind pays 20% of three of a kind
+      const expectedWinAmount = Math.floor(10 * expectedMultiplier);
+      
+      expect(result.winAmount).toBe(expectedWinAmount);
+
+      // Restore original Math.random
+      Math.random = originalRandom;
+    });
+
+    it('should verify win type is always present in response', () => {
+      const result = betService.placeBet({ amount: 10 });
+      expect(result).toHaveProperty('winType');
+      expect(Object.values(WinType)).toContain(result.winType);
+    });
+
+    it('should verify win type matches isWin property', () => {
+      const result = betService.placeBet({ amount: 10 });
+      if (result.isWin) {
+        expect([WinType.THREE_OF_A_KIND, WinType.TWO_OF_A_KIND]).toContain(result.winType);
+      } else {
+        expect(result.winType).toBe(WinType.NO_WIN);
+      }
+    });
+
+    it('should verify win amount is zero for no win', () => {
+      const result = betService.placeBet({ amount: 10, autolose: true });
+      expect(result.winType).toBe(WinType.NO_WIN);
       expect(result.winAmount).toBe(0);
     });
   });
 
-  describe('runThousandSpins', () => {
-    it('should return correct statistics for 1000 spins', () => {
+  describe('runManySpins', () => {
+    it('should return correct statistics for default 1000 spins', () => {
       const amount = 5;
-      const results = betService.runThousandSpins(amount);
+      const results = betService.runManySpins(amount);
 
       expect(results).toHaveProperty('totalSpins', 1000);
       expect(results).toHaveProperty('totalBetAmount', amount * 1000);
@@ -92,32 +142,46 @@ describe('BetService', () => {
       expect(results.returnToPlayer).toBe(results.totalWinAmount / results.totalBetAmount * 100);
     });
 
+    it('should handle custom number of spins', () => {
+      const amount = 5;
+      const spins = 500;
+      const results = betService.runManySpins(amount, {}, spins);
+
+      expect(results.totalSpins).toBe(spins);
+      expect(results.totalBetAmount).toBe(amount * spins);
+    });
+
     it('should handle different bet amounts correctly', () => {
       const amounts = [1, 5, 20];
+      const spins = 100;
       
       for (const amount of amounts) {
-        const results = betService.runThousandSpins(amount);
-        expect(results.totalBetAmount).toBe(amount * 1000);
+        const results = betService.runManySpins(amount, {}, spins);
+        expect(results.totalBetAmount).toBe(amount * spins);
       }
     });
 
     it('should force all wins when autowin is true', () => {
       const amount = 5;
-      const results = betService.runThousandSpins(amount, { autowin: true });
+      const spins = 100;
+      const results = betService.runManySpins(amount, { autowin: true }, spins);
 
       expect(results.winRate).toBe(100);
       expect(results.totalWinAmount).toBeGreaterThan(0);
       expect(results.returnToPlayer).toBeGreaterThan(100);
+      expect(results.totalSpins).toBe(spins);
     });
 
     it('should force all losses when autolose is true', () => {
       const amount = 5;
-      const results = betService.runThousandSpins(amount, { autolose: true });
+      const spins = 100;
+      const results = betService.runManySpins(amount, { autolose: true }, spins);
 
       expect(results.winRate).toBe(0);
       expect(results.totalWinAmount).toBe(0);
       expect(results.returnToPlayer).toBe(0);
       expect(results.expectation).toBe(-amount); // Expect to lose the bet amount each time
+      expect(results.totalSpins).toBe(spins);
     });
   });
 }); 

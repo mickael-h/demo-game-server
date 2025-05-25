@@ -1,4 +1,12 @@
-import { SLOT_SYMBOLS, SYMBOL_VALUES, BetRequest, BetResponse } from '../types';
+import { 
+  SLOT_SYMBOLS, 
+  SYMBOL_VALUES, 
+  BetRequest, 
+  BetResponse, 
+  WinType,
+  OutcomeWeights,
+  SpinStats
+} from '../types';
 
 export class BetService {
   private static instance: BetService;
@@ -15,53 +23,137 @@ export class BetService {
     return BetService.instance;
   }
 
-  public placeBet(request: BetRequest): BetResponse {
-    const { amount, autowin, autolose } = request;
-    let symbols: number[];
-
-    if (autowin) {
-      // Force a win with three random identical symbols
-      const randomSymbol = Math.floor(Math.random() * this.symbols.length);
-      symbols = [randomSymbol, randomSymbol, randomSymbol];
-    } else if (autolose) {
-      // Force a loss with three different random symbols
-      const availableIndices = [...Array(this.symbols.length).keys()];
-      symbols = [];
-      for (let i = 0; i < 3; i++) {
-        const randomIndex = Math.floor(Math.random() * availableIndices.length);
-        symbols.push(availableIndices[randomIndex]);
-        availableIndices.splice(randomIndex, 1);
-      }
-    } else {
-      // Random spin
-      symbols = Array.from({ length: 3 }, () => 
-        Math.floor(Math.random() * this.symbols.length)
-      );
+  private calculateWinAmount(multiplier: number, betAmount: number, winType: WinType): number {
+    if (winType === WinType.NO_WIN) {
+      return 0;
     }
+    // Two of a kind pays 20% of the three of a kind value
+    const winMultiplier = winType === WinType.THREE_OF_A_KIND ? multiplier : multiplier * 0.2; 
+    return Math.floor(betAmount * winMultiplier);
+  }
 
-    const symbolValues = symbols.map(index => SYMBOL_VALUES[this.symbols[index]]);
-    const isWin = this.checkWin(symbols);
-    const winAmount = isWin ? this.calculateWinAmount(symbolValues, amount) : 0;
+  private determineWinType(outcomeWeights?: OutcomeWeights): WinType {
+    const wTrip = 1 * (outcomeWeights?.threeOfAKind ?? 1);
+    const wPair = 3 * (this.symbols.length - 1) * (outcomeWeights?.twoOfAKind ?? 1);
+    const wBust = (this.symbols.length - 1) * (this.symbols.length - 2) * (outcomeWeights?.noWin ?? 1);
+    const totalWeights = wBust + wPair + wTrip;
+    const winRoll = Math.floor(Math.random() * totalWeights);
 
-    return {
-      symbols,
-      betAmount: amount,
-      winAmount,
-      isWin
+    if (winRoll < wTrip) {
+      return WinType.THREE_OF_A_KIND;
+    } else if (winRoll < wTrip + wPair) {
+      return WinType.TWO_OF_A_KIND;
+    }
+    return WinType.NO_WIN;
+  }
+
+  private selectWinningSymbol(): number {
+    const symbolWeights = Array(this.symbols.length).fill(1);
+    const totalSymbolWeight = symbolWeights.reduce((a, b) => a + b, 0);
+    const symbolRoll = Math.floor(Math.random() * totalSymbolWeight);
+    
+    let weightSum = 0;
+    for (let i = 0; i < this.symbols.length; i++) {
+      weightSum += symbolWeights[i];
+      if (symbolRoll < weightSum) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  private generateNoWinSymbols(): { symbols: number[], winningSymbol: number } {
+    const availableIndices = [...Array(this.symbols.length).keys()];
+    const resultSymbols: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const randomIndex = Math.floor(Math.random() * availableIndices.length);
+      resultSymbols.push(availableIndices[randomIndex]);
+      availableIndices.splice(randomIndex, 1);
+    }
+    return { symbols: resultSymbols, winningSymbol: 0 };
+  }
+
+  private generateTwoOfAKindSymbols(winningSymbol: number): { symbols: number[], winningSymbol: number } {
+    const availableIndices = [...Array(this.symbols.length).keys()].filter(i => i !== winningSymbol);
+    const randomIndex = Math.floor(Math.random() * availableIndices.length);
+    const differentSymbol = availableIndices[randomIndex];
+    
+    const resultSymbols = [winningSymbol, winningSymbol, winningSymbol];
+    const differentPosition = Math.floor(Math.random() * 3);
+    resultSymbols[differentPosition] = differentSymbol;
+    return { symbols: resultSymbols, winningSymbol };
+  }
+
+  private generateThreeOfAKindSymbols(winningSymbol: number): { symbols: number[], winningSymbol: number } {
+    return { 
+      symbols: [winningSymbol, winningSymbol, winningSymbol],
+      winningSymbol 
     };
   }
 
-  public runThousandSpins(amount: number, options: { autowin?: boolean; autolose?: boolean } = {}): {
-    totalSpins: number;
-    totalWinAmount: number;
-    totalBetAmount: number;
-    expectation: number;
-    winRate: number;
-    returnToPlayer: number;
-  } {
+  private generateSymbols(winType: WinType): { symbols: number[], winningSymbol: number } {
+    if (winType === WinType.NO_WIN) {
+      return this.generateNoWinSymbols();
+    }
+
+    const winningSymbol = this.selectWinningSymbol();
+
+    if (winType === WinType.THREE_OF_A_KIND) {
+      return this.generateThreeOfAKindSymbols(winningSymbol);
+    }
+
+    // TWO_OF_A_KIND case
+    return this.generateTwoOfAKindSymbols(winningSymbol);
+  }
+
+  public placeBet(request: BetRequest): BetResponse {
+    const { amount: betAmount, autowin, autolose, outcomeWeights } = request;
+    let resultSymbols: number[];
+    let winType: WinType;
+    let winSymbol: number = 0;
+
+    if (autowin) {
+      // Force a win with three random identical symbols
+      winSymbol = Math.floor(Math.random() * this.symbols.length);
+      resultSymbols = [winSymbol, winSymbol, winSymbol];
+      winType = WinType.THREE_OF_A_KIND;
+    } else if (autolose) {
+      // Force a loss with three different random symbols
+      const availableIndices = [...Array(this.symbols.length).keys()];
+      resultSymbols = [];
+      for (let i = 0; i < 3; i++) {
+        const randomIndex = Math.floor(Math.random() * availableIndices.length);
+        resultSymbols.push(availableIndices[randomIndex]);
+        availableIndices.splice(randomIndex, 1);
+      }
+      winType = WinType.NO_WIN;
+    } else {
+      winType = this.determineWinType(outcomeWeights);
+      const { symbols, winningSymbol: generatedWinSymbol } = this.generateSymbols(winType);
+      resultSymbols = symbols;
+      winSymbol = generatedWinSymbol;
+    }
+
+    const isWin = winType !== WinType.NO_WIN;
+    const winAmount = this.calculateWinAmount(SYMBOL_VALUES[this.symbols[winSymbol]], betAmount, winType);
+
+    return {
+      symbols: resultSymbols,
+      betAmount,
+      winAmount,
+      isWin,
+      winType
+    };
+  }
+
+  public runManySpins(
+    amount: number, 
+    options: Omit<BetRequest, 'amount'> = {}, 
+    spins: number = 1000
+  ): SpinStats {
     let totalWinAmount = 0;
     let totalWins = 0;
-    const totalSpins = 1000;
+    const totalSpins = spins;
 
     for (let i = 0; i < totalSpins; i++) {
       const result = this.placeBet({ amount, ...options });
@@ -84,14 +176,5 @@ export class BetService {
       winRate,
       returnToPlayer
     };
-  }
-
-  private checkWin(symbols: number[]): boolean {
-    return symbols.every(symbol => symbol === symbols[0]);
-  }
-
-  private calculateWinAmount(symbolValues: number[], betAmount: number): number {
-    const multiplier = symbolValues[0]; // Use full symbol value as multiplier
-    return Math.floor(betAmount * multiplier);
   }
 } 
