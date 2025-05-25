@@ -139,6 +139,92 @@ describe('BetService', () => {
       expect(result.winType).toBe(WinType.NO_WIN);
       expect(result.winAmount).toBe(0);
     });
+
+    it('should respect custom symbol weights', () => {
+      // Override Math.random to control both win type and symbol selection
+      let call = 0;
+      Math.random = () => {
+        call++;
+        if (call === 1) return 0.2; // select TWO_OF_A_KIND
+        if (call === 2) return 0.0; // select first symbol (due to weights)
+        if (call === 3) return 0.5; // select different symbol (middle index)
+        if (call === 4) return 0.0; // differentPosition = 0
+        return 0.0;
+      };
+
+      // Set weight of first symbol (🍒) to 10 and others to 1, using indexes
+      const symbolWeights = {
+        0: 10, // 🍒
+        1: 1,  // 🍊
+        2: 1,  // 🍋
+        3: 1,  // 🍇
+        4: 1,  // 7️⃣
+        5: 1   // 💎
+      };
+
+      const result = betService.placeBet({ amount: 10, symbolWeights });
+      
+      expect(result.isWin).toBe(true);
+      expect(result.winType).toBe(WinType.TWO_OF_A_KIND);
+      
+      // Find which symbol appears twice
+      const [a, b, c] = result.symbols;
+      const winningSymbol = a === b ? a : b === c ? b : a;
+      expect(winningSymbol).toBe(0); // First symbol (🍒) should be selected
+    });
+
+    it('should handle missing symbol weights gracefully', () => {
+      // Override Math.random to always select the first symbol
+      let call = 0;
+      Math.random = () => {
+        call++;
+        if (call === 1) return 0.2; // select TWO_OF_A_KIND
+        if (call === 2) return 0.0; // select first symbol
+        if (call === 3) return 1.0; // select different symbol
+        if (call === 4) return 0.0; // differentPosition = 0
+        return 0.0;
+      };
+
+      // Only specify weight for one symbol (index 0)
+      const symbolWeights = {
+        0: 10
+      };
+
+      const result = betService.placeBet({ amount: 10, symbolWeights });
+      
+      expect(result.isWin).toBe(true);
+      expect(result.winType).toBe(WinType.TWO_OF_A_KIND);
+      // Should still work, with unspecified symbols defaulting to weight 1
+    });
+
+    it('should handle zero weights correctly', () => {
+      // Override Math.random to always select the second symbol
+      let call = 0;
+      Math.random = () => {
+        call++;
+        if (call === 1) return 0.2; // select TWO_OF_A_KIND
+        if (call === 2) return 0.5; // select second symbol (due to weights)
+        if (call === 3) return 1.0; // select different symbol
+        if (call === 4) return 0.0; // differentPosition = 0
+        return 0.0;
+      };
+
+      // Set weight of first symbol to 0 and others to 1, using indexes
+      const symbolWeights = {
+        0: 0, // 🍒
+        1: 1, // 🍊
+        2: 1, // 🍋
+        3: 1, // 🍇
+        4: 1, // 7️⃣
+        5: 1  // 💎
+      };
+
+      const result = betService.placeBet({ amount: 10, symbolWeights });
+      
+      expect(result.isWin).toBe(true);
+      expect(result.winType).toBe(WinType.TWO_OF_A_KIND);
+      expect(result.symbols[0]).not.toBe(0); // First symbol (🍒) should never be selected
+    });
   });
 
   describe('runManySpins', () => {
@@ -200,6 +286,34 @@ describe('BetService', () => {
       expect(results.returnToPlayer).toBe(0);
       expect(results.expectation).toBe(-amount); // Expect to lose the bet amount each time
       expect(results.totalSpins).toBe(spins);
+    });
+
+    it('should respect symbol weights in many spins', () => {
+      // Override Math.random to always select the first symbol
+      let call = 0;
+      Math.random = () => {
+        call++;
+        if (call === 1) return 0.2; // select TWO_OF_A_KIND
+        if (call === 2) return 0.0; // select first symbol (due to weights)
+        if (call === 3) return 1.0; // select different symbol
+        if (call === 4) return 0.0; // differentPosition = 0
+        return 0.0;
+      };
+
+      const symbolWeights = {
+        0: 10, // 🍒
+        1: 1,  // 🍊
+        2: 1,  // 🍋
+        3: 1,  // 🍇
+        4: 1,  // 7️⃣
+        5: 1   // 💎
+      };
+
+      const results = betService.runManySpins(10, { symbolWeights }, 100);
+      
+      expect(results.totalSpins).toBe(100);
+      expect(results.winRate).toBeGreaterThan(0);
+      expect(results.returnToPlayer).toBeGreaterThan(0);
     });
   });
 }); 

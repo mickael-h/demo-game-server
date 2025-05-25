@@ -21,11 +21,16 @@ export interface OutcomeWeights {
   noWin?: number;
 }
 
+export interface SymbolWeights {
+  [index: number]: number;
+}
+
 export interface BetRequest {
   amount: number;
   autowin?: boolean;
   autolose?: boolean;
   outcomeWeights?: OutcomeWeights;
+  symbolWeights?: SymbolWeights;
 }
 
 export interface BetResponse {

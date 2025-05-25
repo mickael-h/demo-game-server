@@ -9,13 +9,13 @@ const betService = BetService.getInstance();
 
 router.post('/place', (req: Request<{}, {}, BetRequest>, res: Response) => {
   try {
-    const { amount, autowin, autolose, outcomeWeights } = req.body;
+    const { amount, autowin, autolose, outcomeWeights, symbolWeights } = req.body;
 
     if (!ALLOWED_BETS.includes(amount)) {
       return res.status(400).json({ error: 'Invalid bet amount' });
     }
 
-    const result = betService.placeBet({ amount, autowin, autolose, outcomeWeights });
+    const result = betService.placeBet({ amount, autowin, autolose, outcomeWeights, symbolWeights });
     res.json(result);
   } catch (error) {
     console.error('Error placing bet:', error);
@@ -25,7 +25,7 @@ router.post('/place', (req: Request<{}, {}, BetRequest>, res: Response) => {
 
 router.post('/many-spins', (req: Request<{}, {}, BetRequest & { spins?: number }>, res: Response) => {
   try {
-    const { amount, autowin, autolose, outcomeWeights, spins = 1000 } = req.body;
+    const { amount, autowin, autolose, outcomeWeights, symbolWeights, spins = 1000 } = req.body;
 
     if (!ALLOWED_BETS.includes(amount)) {
       return res.status(400).json({ error: 'Invalid bet amount' });
@@ -35,7 +35,7 @@ router.post('/many-spins', (req: Request<{}, {}, BetRequest & { spins?: number }
       return res.status(400).json({ error: 'Invalid number of spins. Must be between 1 and 10000000' });
     }
 
-    const results = betService.runManySpins(amount, { autowin, autolose, outcomeWeights }, spins);
+    const results = betService.runManySpins(amount, { autowin, autolose, outcomeWeights, symbolWeights }, spins);
     res.json(results);
   } catch (error) {
     console.error('Error running many spins:', error);
