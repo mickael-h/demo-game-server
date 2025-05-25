@@ -4,18 +4,14 @@
   "outputDirectory": "dist",
   "builds": [
     {
-      "src": "dist/bin/www.js",
+      "src": "package.json",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "dist/bin/www.js"
-    },
-    {
       "src": "/(.*)",
-      "dest": "dist/bin/www.js"
+      "dest": "/"
     }
   ],
   "env": {
