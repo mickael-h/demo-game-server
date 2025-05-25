@@ -3,11 +3,19 @@ import { SLOT_SYMBOLS, SYMBOL_VALUES, WinType } from '../types';
 
 describe('BetService', () => {
   let betService: BetService;
+  let originalRandom: () => number;
 
   beforeEach(() => {
     // Reset the singleton instance before each test
     (BetService as any).instance = undefined;
     betService = BetService.getInstance();
+    // Store original Math.random
+    originalRandom = Math.random;
+  });
+
+  afterEach(() => {
+    // Restore original Math.random after each test
+    Math.random = originalRandom;
   });
 
   describe('placeBet', () => {
@@ -58,9 +66,8 @@ describe('BetService', () => {
     });
 
     it('should calculate correct win amount based on symbol values', () => {
-      // Mock Math.random to get a specific symbol
-      const originalRandom = Math.random;
-      Math.random = jest.fn().mockReturnValue(0.1); // This will give us the first symbol (🍒)
+      // Override Math.random to get a specific symbol
+      Math.random = () => 0.1; // This will give us the first symbol (🍒)
 
       const result = betService.placeBet({ amount: 10, autowin: true });
       
@@ -71,34 +78,45 @@ describe('BetService', () => {
       const expectedWinAmount = Math.floor(10 * expectedMultiplier);
       
       expect(result.winAmount).toBe(expectedWinAmount);
-
-      // Restore original Math.random
-      Math.random = originalRandom;
     });
 
     it('should handle two of a kind wins', () => {
-      // Mock the random number generation to get two of a kind
-      const originalRandom = Math.random;
-      Math.random = jest.fn()
-        .mockReturnValueOnce(0.1) // First symbol
-        .mockReturnValueOnce(0.1) // Second symbol (same as first)
-        .mockReturnValueOnce(0.5); // Third symbol (different)
+      // Override Math.random to control the two of a kind outcome deterministically
+      let call = 0;
+      Math.random = () => {
+        call++;
+        if (call === 1) return 0.2; // select TWO_OF_A_KIND (should be in the two of a kind range)
+        if (call === 2) return 0.0; // select winning symbol (index 0)
+        if (call === 3) return 1.0; // select different symbol (last index)
+        if (call === 4) return 0.0; // differentPosition = 0 (first position is different)
+        return 0.0;
+      };
 
       const result = betService.placeBet({ amount: 10 });
-      
+
       expect(result.isWin).toBe(true);
       expect(result.winType).toBe(WinType.TWO_OF_A_KIND);
-      expect(result.symbols[0]).toBe(result.symbols[1]);
-      expect(result.symbols[0]).not.toBe(result.symbols[2]);
-      
-      const symbol = SLOT_SYMBOLS[result.symbols[0]];
-      const expectedMultiplier = SYMBOL_VALUES[symbol] * 0.2; // Two of a kind pays 20% of three of a kind
-      const expectedWinAmount = Math.floor(10 * expectedMultiplier);
-      
-      expect(result.winAmount).toBe(expectedWinAmount);
 
-      // Restore original Math.random
-      Math.random = originalRandom;
+      // Find which symbol is the odd one out
+      const [a, b, c] = result.symbols;
+      expect(
+        (a === b && a !== c) ||
+        (a === c && a !== b) ||
+        (b === c && b !== a)
+      ).toBe(true);
+
+      // The winning symbol is the one that appears twice
+      const counts = [a, b, c].reduce((acc, val) => {
+        acc[val] = (acc[val] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>);
+      const winningSymbol = Number(Object.keys(counts).find(k => counts[Number(k)] === 2));
+
+      const symbol = SLOT_SYMBOLS[winningSymbol];
+      const expectedMultiplier = SYMBOL_VALUES[symbol] * 0.2;
+      const expectedWinAmount = Math.floor(10 * expectedMultiplier);
+
+      expect(result.winAmount).toBe(expectedWinAmount);
     });
 
     it('should verify win type is always present in response', () => {
