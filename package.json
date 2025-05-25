@@ -9,7 +9,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json}\"",
-    "vercel-build": "npm run build && npm start"
+    "vercel-build": "npm run build"
   },
   "keywords": [],
   "author": "",
